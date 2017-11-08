@@ -149,6 +149,7 @@ enum uncrustify_options
    // group: UG_space, "Spacing options"                                                        1
    UO_sp_arith,                    // space around + - / * etc
                                    // also ">>>" "<<" ">>" "%" "|"
+   UO_sp_arith_additive,           // space around + or -
    UO_sp_assign,                   // space around =, +=, etc
    UO_sp_cpp_lambda_assign,        // space around the capture spec [=](...){...}
    UO_sp_cpp_lambda_paren,         // space after the capture spec [] (...){...}
@@ -428,6 +429,7 @@ enum uncrustify_options
    UO_indent_cpp_lambda_body,               // indent cpp lambda or not
    UO_indent_using_block,                   // indent (or not) an using block if no braces are used,
    UO_indent_ternary_operator,              // indent continuation of ternary operator
+   UO_indent_ignore_asm_block,              // ignore indent and align for asm blocks as they have their own indentation
    // UO_indent_brace_struct,      TODO: spaces to indent brace after struct/enum/union def
    // UO_indent_paren,             TODO: indent for open paren on next line (1)
    // UO_indent,                   TODO: 0=don't change indentation, 1=change indentation
@@ -704,7 +706,7 @@ enum uncrustify_options
    UO_align_keep_tabs,             // keep non-indenting tabs
    UO_align_with_tabs,             // use tabs for aligning (0/1)
    UO_align_on_tabstop,            // always align on tabstops
-   UO_align_number_left,           // left-align numbers (not fully supported, yet)
+   UO_align_number_right,          // right-align numbers (not fully supported, yet)
    UO_align_keep_extra_space,      // don't squash extra whitespace
    UO_align_func_params,           // align prototype variable defs on variable
    UO_align_func_params_span,      // align parameter defs in function on parameter name
@@ -897,9 +899,9 @@ enum uncrustify_options
 
 
 #ifdef EMSCRIPTEN
-#define group_map_value_options_t    vector<uncrustify_options>
+#define group_map_value_options_t    std::vector<uncrustify_options>
 #else
-#define group_map_value_options_t    list<uncrustify_options>
+#define group_map_value_options_t    std::list<uncrustify_options>
 #endif
 
 struct group_map_value
@@ -1006,42 +1008,42 @@ void print_options(FILE *pfile);
  *
  * @param val  argument type to convert
  */
-string argtype_to_string(argtype_e argtype);
+std::string argtype_to_string(argtype_e argtype);
 
 /**
  * convert a boolean to a string
  *
  * @param val  boolean to convert
  */
-string bool_to_string(bool val);
+std::string bool_to_string(bool val);
 
 /**
  * convert an argument value to a string
  *
  * @param val  argument value to convert
  */
-string argval_to_string(argval_t argval);
+std::string argval_to_string(argval_t argval);
 
 /**
  * convert an integer number to a string
  *
  * @param val  integer number to convert
  */
-string number_to_string(int number);
+std::string number_to_string(int number);
 
 /**
  * convert a line ending type to a string
  *
  * @param val  line ending type to convert
  */
-string lineends_to_string(lineends_e linends);
+std::string lineends_to_string(lineends_e linends);
 
 /**
  * convert a token to a string
  *
  * @param val  token to convert
  */
-string tokenpos_to_string(tokenpos_e tokenpos);
+std::string tokenpos_to_string(tokenpos_e tokenpos);
 
 /**
  * convert an argument of a given type to a string
@@ -1049,13 +1051,13 @@ string tokenpos_to_string(tokenpos_e tokenpos);
  * @param argtype   type of argument
  * @param op_val_t  value of argument
  */
-string op_val_to_string(argtype_e argtype, op_val_t op_val);
+std::string op_val_to_string(argtype_e argtype, op_val_t op_val);
 
 
-typedef map<uncrustify_options, option_map_value>::iterator   option_name_map_it;
-typedef map<uncrustify_groups, group_map_value>::iterator     group_map_it;
-typedef group_map_value_options_t::iterator                   option_list_it;
-typedef group_map_value_options_t::const_iterator             option_list_cit;
+typedef std::map<uncrustify_options, option_map_value>::iterator   option_name_map_it;
+typedef std::map<uncrustify_groups, group_map_value>::iterator     group_map_it;
+typedef group_map_value_options_t::iterator                        option_list_it;
+typedef group_map_value_options_t::const_iterator                  option_list_cit;
 
 
 #endif /* OPTIONS_H_INCLUDED */

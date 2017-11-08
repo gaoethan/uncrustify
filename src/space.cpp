@@ -29,6 +29,11 @@
 #include "unc_ctype.h"
 #include "uncrustify.h"
 
+#include <algorithm>
+
+
+using namespace std;
+
 
 static void log_rule2(size_t line, const char *rule, chunk_t *first, chunk_t *second, bool complete);
 
@@ -120,11 +125,12 @@ static void log_rule2(size_t line, const char *rule, chunk_t *first, chunk_t *se
    LOG_FUNC_ENTRY();
    if (second->type != CT_NEWLINE)
    {
-      LOG_FMT(LSPACE, "%s(%d): Spacing: first->orig_line is %zu, first->text() is '%s', [%s/%s] <===>\n",
-              __func__, __LINE__, first->orig_line, first->text(),
+      LOG_FMT(LSPACE, "%s(%d): Spacing: first->orig_line is %zu, first->orig_col is %zu, first->text() is '%s', [%s/%s] <===>\n",
+              __func__, __LINE__, first->orig_line, first->orig_col, first->text(),
               get_token_name(first->type), get_token_name(first->parent_type));
-      LOG_FMT(LSPACE, "   second->text() '%s', [%s/%s] : rule %s[line %zu]%s",
-              second->text(), get_token_name(second->type), get_token_name(second->parent_type),
+      LOG_FMT(LSPACE, "   second->orig_line is %zu, second->orig_col is %zu, second->text() '%s', [%s/%s] : rule %s[line %zu]%s",
+              second->orig_line, second->orig_col, second->text(),
+              get_token_name(second->type), get_token_name(second->parent_type),
               rule, line,
               complete ? "\n" : "");
    }
@@ -183,7 +189,9 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
       log_rule("REMOVE");
       return(AV_REMOVE);
    }
-   if (first->type == CT_VBRACE_OPEN && second->type != CT_NL_CONT)
+   if (  first->type == CT_VBRACE_OPEN
+      && second->type != CT_NL_CONT
+      && second->type != CT_SEMICOLON) // # Issue 1158
    {
       log_rule("FORCE");
       return(AV_FORCE);
@@ -910,6 +918,12 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
          return(cpd.settings[UO_sp_after_sparen].a);
       }
    }
+   if (  first->type == CT_VBRACE_OPEN
+      && second->type == CT_SEMICOLON) // Issue # 1158
+   {
+      log_rule("sp_before_semi");
+      return(cpd.settings[UO_sp_before_semi].a);
+   }
 
    if (  second->type == CT_FPAREN_OPEN
       && first->parent_type == CT_OPERATOR
@@ -1058,7 +1072,7 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
       return(cpd.settings[UO_sp_inside_braces_empty].a);
    }
 
-   if (second->type == CT_BRACE_OPEN && second->parent_type == CT_TYPE)
+   if (second->type == CT_BRACE_OPEN && second->parent_type == CT_BRACED_INIT_LIST)
    {
       // 'int{9}' vs 'int {9}'
       return(cpd.settings[UO_sp_type_brace_init_lst].a);
@@ -1076,7 +1090,7 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
          log_rule("sp_inside_braces_struct");
          return(cpd.settings[UO_sp_inside_braces_struct].a);
       }
-      if (second->parent_type == CT_TYPE)
+      if (second->parent_type == CT_BRACED_INIT_LIST)
       {
          if (cpd.settings[UO_sp_before_type_brace_init_lst_close].a != AV_IGNORE)
          {
@@ -1246,6 +1260,17 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
       // Arith after a cast comes first
       if (second->type == CT_ARITH || second->type == CT_CARET)
       {
+         if (cpd.settings[UO_sp_arith_additive].a != AV_IGNORE)
+         {
+            auto arith_char = (first->type == CT_ARITH || first->type == CT_CARET)
+                              ? first->str[0] : second->str[0];
+            if (arith_char == '+' || arith_char == '-')
+            {
+               log_rule("sp_arith_additive");
+               return(cpd.settings[UO_sp_arith_additive].a);
+            }
+         }
+
          log_rule("sp_arith");
          return(cpd.settings[UO_sp_arith].a);
       }
@@ -1496,6 +1521,17 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
       || second->type == CT_ARITH
       || second->type == CT_CARET)
    {
+      if (cpd.settings[UO_sp_arith_additive].a != AV_IGNORE)
+      {
+         auto arith_char = (first->type == CT_ARITH || first->type == CT_CARET)
+                           ? first->str[0] : second->str[0];
+         if (arith_char == '+' || arith_char == '-')
+         {
+            log_rule("sp_arith_additive");
+            return(cpd.settings[UO_sp_arith_additive].a);
+         }
+      }
+
       log_rule("sp_arith");
       return(cpd.settings[UO_sp_arith].a);
    }
@@ -1667,7 +1703,7 @@ static argval_t do_space(chunk_t *first, chunk_t *second, int &min_sp, bool comp
          log_rule("sp_inside_braces_struct");
          return(cpd.settings[UO_sp_inside_braces_struct].a);
       }
-      if (first->parent_type == CT_TYPE)
+      if (first->parent_type == CT_BRACED_INIT_LIST)
       {
          if (cpd.settings[UO_sp_after_type_brace_init_lst_open].a != AV_IGNORE)
          {
@@ -1944,12 +1980,12 @@ void space_text(void)
    {
       if (pc->type == CT_NEWLINE)
       {
-         LOG_FMT(LSPACE, "%s(%d): orig_col is %zu, orig_col is %zu, NEWLINE\n",
+         LOG_FMT(LSPACE, "%s(%d): orig_line is %zu, orig_col is %zu, NEWLINE\n",
                  __func__, __LINE__, pc->orig_line, pc->orig_col);
       }
       else
       {
-         LOG_FMT(LSPACE, "%s(%d): orig_col is %zu, orig_col is %zu, '%s' type is %s\n",
+         LOG_FMT(LSPACE, "%s(%d): orig_line is %zu, orig_col is %zu, '%s' type is %s\n",
                  __func__, __LINE__, pc->orig_line, pc->orig_col, pc->text(), get_token_name(pc->type));
       }
       if (  (cpd.settings[UO_use_options_overriding_for_qt_macros].b)

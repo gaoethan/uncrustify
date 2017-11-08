@@ -24,6 +24,9 @@
 #include "helper_for_print.h"
 
 
+using namespace std;
+
+
 /**
  * General indenting approach:
  * Indenting levels are put into a stack.
@@ -381,6 +384,12 @@ void reindent_line(chunk_t *pc, size_t column)
 static void indent_pse_push(parse_frame_t &frm, chunk_t *pc)
 {
    LOG_FUNC_ENTRY();
+   if (pc == nullptr)
+   {
+      throw std::invalid_argument(
+               string(__func__) + ":" + std::to_string(__LINE__)
+               + " - pc cannot be nullptr");
+   }
    static size_t ref = 0;
 
    // check the stack depth
@@ -414,7 +423,7 @@ static void indent_pse_push(parse_frame_t &frm, chunk_t *pc)
       log_flush(true);
       exit(EXIT_FAILURE);
    }
-}
+} // indent_pse_push
 
 
 static void indent_pse_pop(parse_frame_t &frm, chunk_t *pc)
@@ -818,7 +827,12 @@ void indent_text(void)
 
          // Transition into a preproc by creating a dummy indent
          frm.level++;
-         indent_pse_push(frm, chunk_get_next(pc));
+         chunk_t *pp_next = chunk_get_next(pc);
+         if (pp_next == nullptr)
+         {
+            return;
+         }
+         indent_pse_push(frm, pp_next);
 
          if (  pc->parent_type == CT_PP_DEFINE
             || pc->parent_type == CT_PP_UNDEF)
@@ -1706,6 +1720,28 @@ void indent_text(void)
          }
       }
       else if (  pc->type == CT_PAREN_OPEN
+              && (pc->parent_type == CT_ASM || chunk_get_prev_ncnl(pc)->type == CT_ASM)
+              && cpd.settings[UO_indent_ignore_asm_block].b)
+      {
+         int     move = 0;
+         chunk_t *tmp = chunk_skip_to_match(pc);
+         if (  chunk_is_newline(chunk_get_prev(pc))
+            && pc->column != indent_column)
+         {
+            move = indent_column - pc->column;
+         }
+         else
+         {
+            move = pc->column - pc->orig_col;
+         }
+         do
+         {
+            pc->column = pc->orig_col + move;
+            pc         = chunk_get_next(pc);
+         } while (pc != tmp);
+         reindent_line(pc, indent_column);
+      }
+      else if (  pc->type == CT_PAREN_OPEN
               || pc->type == CT_SPAREN_OPEN
               || pc->type == CT_FPAREN_OPEN
               || pc->type == CT_SQUARE_OPEN
@@ -1901,7 +1937,7 @@ void indent_text(void)
       }
       else if (  pc->type == CT_ASSIGN
               || pc->type == CT_IMPORT
-              || pc->type == CT_USING)
+              || (pc->type == CT_USING && (cpd.lang_flags & LANG_CS)))
       {
          /*
           * if there is a newline after the '=' or the line starts with a '=',
@@ -2432,8 +2468,8 @@ void indent_text(void)
          }
          else
          {
-            bool   use_ident = true;
-            size_t ttidx     = frm.pse_tos;
+            bool   use_indent = true;
+            size_t ttidx      = frm.pse_tos;
             if (ttidx > 0)
             {
                //if (strcasecmp(get_token_name(frm.pse[ttidx].pc->parent_type), "FUNC_CALL") == 0)
@@ -2447,13 +2483,13 @@ void indent_text(void)
                   else
                   {
                      LOG_FMT(LINDPC, "use is false [%d]\n", __LINE__);
-                     use_ident = false;
+                     use_indent = false;
                   }
                }
             }
             if (pc->column != indent_column)
             {
-               if (use_ident && pc->type != CT_PP_IGNORE) // Leave indentation alone for PP_IGNORE tokens
+               if (use_indent && pc->type != CT_PP_IGNORE) // Leave indentation alone for PP_IGNORE tokens
                {
                   LOG_FMT(LINDENT, "%s(%d): orig_line is %zu, indent set to %zu, for '%s'\n",
                           __func__, __LINE__, pc->orig_line, indent_column, pc->text());

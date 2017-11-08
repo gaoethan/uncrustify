@@ -24,6 +24,10 @@
 #include <cerrno>
 #include "unc_ctype.h"
 
+
+using namespace std;
+
+
 static const char *DOC_TEXT_END = R"___(
 # Meaning of the settings:
 #   Ignore - do not do any changes
@@ -314,6 +318,8 @@ void register_options(void)
    unc_add_option("sp_arith", UO_sp_arith, AT_IARF,
                   "Add or remove space around arithmetic operator '+', '-', '/', '*', etc\n"
                   "also '>>>' '<<' '>>' '%' '|'.");
+   unc_add_option("sp_arith_additive", UO_sp_arith_additive, AT_IARF,
+                  "Add or remove space around arithmetic operator '+' and '-'. Overrides sp_arith");
    unc_add_option("sp_assign", UO_sp_assign, AT_IARF,
                   "Add or remove space around assignment operator '=', '+=', etc.");
    unc_add_option("sp_cpp_lambda_assign", UO_sp_cpp_lambda_assign, AT_IARF,
@@ -919,6 +925,8 @@ void register_options(void)
                   "0: (Default) off\n"
                   "1: When the `if_false` is a continuation, indent it under `if_false`\n"
                   "2: When the `:` is a continuation, indent it under `?`", "", 0, 2);
+   unc_add_option("indent_ignore_asm_block", UO_indent_ignore_asm_block, AT_BOOL,
+                  "If true, ignore indent and align for asm blocks as they have their own indentation.");
 
    unc_begin_group(UG_newline, "Newline adding and removing options");
    unc_add_option("nl_collapse_empty_body", UO_nl_collapse_empty_body, AT_BOOL,
@@ -1384,8 +1392,8 @@ void register_options(void)
                   "Whether to use tabs for aligning.");
    unc_add_option("align_on_tabstop", UO_align_on_tabstop, AT_BOOL,
                   "Whether to bump out to the next tab when aligning.");
-   unc_add_option("align_number_left", UO_align_number_left, AT_BOOL,
-                  "Whether to left-align numbers.");
+   unc_add_option("align_number_right", UO_align_number_right, AT_BOOL,
+                  "Whether to right-align numbers.");
    unc_add_option("align_keep_extra_space", UO_align_keep_extra_space, AT_BOOL,
                   "Whether to keep whitespace not required for alignment.");
    unc_add_option("align_func_params", UO_align_func_params, AT_BOOL,

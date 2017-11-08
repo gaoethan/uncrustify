@@ -53,6 +53,9 @@ utf8_force                      = false    # false/true
 # also '>>>' '<<' '>>' '%' '|'.
 sp_arith                        = ignore   # ignore/add/remove/force
 
+# Add or remove space around arithmetic operator '+' and '-'. Overrides sp_arith
+sp_arith_additive               = ignore   # ignore/add/remove/force
+
 # Add or remove space around assignment operator '=', '+=', etc.
 sp_assign                       = ignore   # ignore/add/remove/force
 
@@ -913,6 +916,9 @@ indent_using_block              = true     # false/true
 # 2: When the `:` is a continuation, indent it under `?`
 indent_ternary_operator         = 0        # unsigned number
 
+# If true, ignore indent and align for asm blocks as they have their own indentation.
+indent_ignore_asm_block         = false    # false/true
+
 #
 # Newline adding and removing options
 #
@@ -1581,8 +1587,8 @@ align_with_tabs                 = false    # false/true
 # Whether to bump out to the next tab when aligning.
 align_on_tabstop                = false    # false/true
 
-# Whether to left-align numbers.
-align_number_left               = false    # false/true
+# Whether to right-align numbers.
+align_number_right              = false    # false/true
 
 # Whether to keep whitespace not required for alignment.
 align_keep_extra_space          = false    # false/true
