@@ -2412,7 +2412,7 @@ void indent_text(void)
                     || next->type == CT_VBRACE_OPEN))
          {
             // indent const - void GetFoo(void)\n const\n { return (m_Foo); }
-            indent_column_set(cpd.settings[UO_indent_func_const].u);
+            indent_column_set(frm.pse[frm.pse_tos].indent + cpd.settings[UO_indent_func_const].u);
             LOG_FMT(LINDENT, "%s(%d): %zu] const => %zu [%s]\n",
                     __func__, __LINE__, pc->orig_line, indent_column, pc->text());
             reindent_line(pc, indent_column);
@@ -2607,7 +2607,7 @@ null_pc:
    for (size_t idx_temp = 1; idx_temp <= frm.pse_tos; idx_temp++)
    {
       LOG_FMT(LWARN, "%s:%zu Unmatched %s\n",
-              cpd.filename, frm.pse[idx_temp].open_line,
+              cpd.filename.c_str(), frm.pse[idx_temp].open_line,
               get_token_name(frm.pse[idx_temp].type));
       cpd.error_count++;
    }

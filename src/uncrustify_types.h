@@ -290,14 +290,14 @@ struct chunk_t
 
 
    //! provides the number of characters of string
-   size_t len()
+   size_t len() const
    {
       return(str.size());
    }
 
 
    //! provides the content of a string a zero terminated character pointer
-   const char *text()
+   const char *text() const
    {
       return(str.c_str());
    }
@@ -424,7 +424,7 @@ struct cp_data_t
    bool              if_changed;
 
    UINT32            error_count;   //! counts how many errors occurred so far
-   const char        *filename;
+   std::string       filename;
 
    file_mem          file_hdr;      // for cmt_insert_file_header
    file_mem          file_ftr;      // for cmt_insert_file_footer
@@ -465,7 +465,8 @@ struct cp_data_t
    int               changes;
    int               pass_count; //! indicates how often the chunk list shall be processed
 
-   align_t           al[80];
+#define AL_SIZE    8000
+   align_t           al[AL_SIZE];
    size_t            al_cnt;
    bool              al_c99_array;
 
